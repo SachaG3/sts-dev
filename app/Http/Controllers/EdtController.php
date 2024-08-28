@@ -28,9 +28,7 @@ class EdtController extends Controller
 
     public function getData()
     {
-        $latestSemaine = Semaine::latest()->first();
-        $data = $latestSemaine ? json_decode($latestSemaine->json_data, true) : null;
-
+        $allSemaines = Semaine::all();
         $startDate = Carbon::parse('2024-08-26');
         $endDate = Carbon::parse('2025-08-31');
 
@@ -46,8 +44,13 @@ class EdtController extends Controller
 
             if (in_array($weekStart->format('Y-m-d'), $this->courseWeeks)) {
                 $weekData['type'] = 'cours';
-                if ($data && $this->isWeekDataAvailable($data, $weekStart)) {
-                    $weekData['emploi_du_temps'] = $data['emploi_du_temps'];
+
+                $weekSemaine = $allSemaines->first(function ($semaine) use ($weekStart) {
+                    return $this->isWeekDataAvailable($semaine, $weekStart);
+                });
+
+                if ($weekSemaine) {
+                    $weekData['emploi_du_temps'] = json_decode($weekSemaine->json_data, true)['emploi_du_temps'];
                 } else {
                     $weekData['emploi_du_temps'] = $this->getDefaultCourseWeek($weekStart);
                 }
@@ -61,14 +64,17 @@ class EdtController extends Controller
         return response()->json(['weeks' => $allWeeks]);
     }
 
-    private function isWeekDataAvailable($data, $weekStart)
+    private function isWeekDataAvailable($semaine, $weekStart)
     {
+        $data = json_decode($semaine->json_data, true);
+
         if (!isset($data['emploi_du_temps'][0]['date'])) {
             return false;
         }
         $dataWeekStart = Carbon::createFromFormat('d/m/Y', $data['emploi_du_temps'][0]['date'])->startOfWeek();
         return $dataWeekStart->eq($weekStart);
     }
+
 
     private function getDefaultCourseWeek($weekStart)
     {

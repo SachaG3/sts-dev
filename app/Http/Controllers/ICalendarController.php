@@ -2,7 +2,6 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Semaine;
 use Carbon\Carbon;
 use Carbon\CarbonPeriod;
 use Illuminate\Http\Request;
@@ -12,7 +11,6 @@ use Spatie\IcalendarGenerator\Components\Event;
 class ICalendarController extends Controller
 {
     protected $courseWeeks;
-    protected $detailedWeekAdded = false;
 
     public function __construct()
     {
@@ -50,56 +48,76 @@ class ICalendarController extends Controller
 
     private function addCourseWeek($calendar, $weekStart)
     {
-        $semaine = Semaine::latest()->first();
+        // Trouver le jour correspondant au lundi de la semaine
+        $jourLundi = \App\Models\Jour::where('date', $weekStart->format('Y-m-d'))->first();
 
-        if ($semaine && $semaine->json_data && !$this->detailedWeekAdded) {
-            $data = json_decode($semaine->json_data, true);
-            $this->addDetailedCourseWeek($calendar, $weekStart, $data);
-            $this->detailedWeekAdded = true;
+        if ($jourLundi) {
+            // Récupérer la semaine associée à ce jour
+            $semaine = $jourLundi->semaine;
+
+
+            // Récupérer les jours de la semaine
+            $jours = $semaine->jours()->with('cours')->get();
+
+            if ($jours->isEmpty()) {
+            }
+
+            foreach ($jours as $jour) {
+
+                $this->addCoursesForDay($calendar, $weekStart, $jour);
+            }
         } else {
             $this->addDefaultCourseWeek($calendar, $weekStart);
         }
     }
 
-    private function addDetailedCourseWeek($calendar, $weekStart, $data)
+    private function addCoursesForDay($calendar, $weekStart, $jour)
     {
-        foreach ($data['emploi_du_temps'] as $index => $jourData) {
-            $date = $weekStart->copy()->addDays($index)->setTimezone('Europe/Paris');
+        // Définir le fuseau horaire utilisé dans la base de données (par exemple, UTC)
+        $timezone = 'Europe/Paris'; // Assurez-vous que c'est le fuseau horaire correct pour vos données
 
-            if (isset($jourData['cours']) && is_array($jourData['cours'])) {
-                foreach ($jourData['cours'] as $coursData) {
-                    if (isset($coursData['heure_debut']) && isset($coursData['heure_fin']) && isset($coursData['matiere'])) {
-                        $start = $date->copy()->setTimeFromTimeString($this->formatTime($coursData['heure_debut']));
-                        $end = $date->copy()->setTimeFromTimeString($this->formatTime($coursData['heure_fin']));
+        // Calculer la date du jour en fonction du lundi de la semaine
+        $jourDate = Carbon::parse($weekStart)->addDays($this->getDayIndex($jour->jour))->setTimezone($timezone);
 
-                        $description = "";
-                        if (isset($coursData['professeur'])) {
-                            $description .= "Professeur: {$coursData['professeur']}\n";
-                        }
-                        if (isset($coursData['salle'])) {
-                            $description .= "Salle: {$coursData['salle']}";
-                        }
-                        $description = trim($description);
 
-                        $event = Event::create()
-                            ->name($coursData['matiere'])
-                            ->description($description)
-                            ->startsAt($start)
-                            ->endsAt($end);
+        foreach ($jour->cours as $cours) {
+            // Convertir les heures de début et de fin au fuseau horaire correct
+            $start = Carbon::parse($jourDate->format('Y-m-d') . ' ' . $cours->heure_debut, $timezone);
+            $end = Carbon::parse($jourDate->format('Y-m-d') . ' ' . $cours->heure_fin, $timezone);
 
-                        $calendar->event($event);
-                    }
-                }
+            $description = "";
+            if ($cours->professeur) {
+                $description .= "Professeur: {$cours->professeur}\n";
             }
+            if ($cours->salle) {
+                $description .= "Salle: {$cours->salle}";
+            }
+            $description = trim($description);
+
+            $event = Event::create()
+                ->name($cours->matiere)
+                ->description($description)
+                ->startsAt($start)
+                ->endsAt($end);
+
+            $calendar->event($event);
         }
     }
 
-    private function formatTime($time)
+
+    private function getDayIndex($jourName)
     {
-        $parts = explode('h', $time);
-        $hours = str_pad($parts[0], 2, '0', STR_PAD_LEFT);
-        $minutes = isset($parts[1]) ? str_pad($parts[1], 2, '0', STR_PAD_RIGHT) : '00';
-        return "$hours:$minutes:00";
+        $days = [
+            'lundi' => 0,
+            'mardi' => 1,
+            'mercredi' => 2,
+            'jeudi' => 3,
+            'vendredi' => 4,
+            'samedi' => 5,
+            'dimanche' => 6,
+        ];
+
+        return $days[strtolower($jourName)] ?? 0;
     }
 
     private function addDefaultCourseWeek($calendar, $weekStart)
