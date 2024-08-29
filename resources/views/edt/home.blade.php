@@ -64,10 +64,10 @@
         document.addEventListener('DOMContentLoaded', function () {
             const calendarEl = document.getElementById('calendar');
             const isMobileView = window.innerWidth <= 768;
-            const initialView = isMobileView ? 'timeGridDay' : 'timeGridWeek'; // Vue par défaut conditionnée
+            const initialView = isMobileView ? 'timeGridDay' : 'timeGridWeek';
 
             calendar = new FullCalendar.Calendar(calendarEl, {
-                initialView: initialView, // Vue par défaut
+                initialView: initialView,
                 headerToolbar: {
                     left: 'prev,next today',
                     center: 'title',
@@ -88,6 +88,7 @@
                 expandRows: true,
                 slotMinTime: '08:00',
                 slotMaxTime: '18:00',
+                hiddenDays: [0, 6], // Masque le dimanche (0) et le samedi (6)
                 dayHeaderFormat: isMobileView ? {weekday: 'narrow'} : {weekday: 'long'},
                 eventContent: function (arg) {
                     const professor = arg.event.extendedProps.professor;
@@ -154,7 +155,8 @@
 
             loadEdtData();
 
-            // Fonction pour exporter la vue actuelle en PDF
+            document.getElementById('exportButton').addEventListener('click', exportToICS);
+
             document.getElementById('exportPdfButton').addEventListener('click', function () {
                 console.log("Export PDF button clicked");
 
@@ -171,7 +173,6 @@
                         console.error("Error generating PDF:", error);
                     });
             });
-
         });
 
 
