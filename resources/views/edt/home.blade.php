@@ -1,4 +1,7 @@
 @extends("include/app")
+@section('head')
+    <title>Emploi du temps - Licence STS Dev</title>
+@endsection
 @section('content')
     <body class="bg-base-100 min-h-screen">
     <div class="container mx-auto p-4">

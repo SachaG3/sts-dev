@@ -3,8 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Emploi du temps - Licence STS Dev</title>
+    <link rel="shortcut icon" href="caensup_logo.jpeg" type="image/x-icon">
     <link rel="stylesheet" href="css/output.css">
+    @yield('head')
     @yield("script")
     <style>
         @yield("style")
