@@ -29,6 +29,7 @@ class EdtController extends Controller
     public function getData()
     {
         $allSemaines = Semaine::all();
+        $currentDate = Carbon::now()->startOfWeek();
         $startDate = Carbon::parse('2024-08-26');
         $endDate = Carbon::parse('2025-08-31');
 
@@ -36,33 +37,42 @@ class EdtController extends Controller
         $allWeeks = [];
 
         foreach ($weeks as $weekStart) {
-            $weekData = [
-                'start_date' => $weekStart->format('Y-m-d'),
-                'type' => 'alternance',
-                'emploi_du_temps' => []
-            ];
-
-            if (in_array($weekStart->format('Y-m-d'), $this->courseWeeks)) {
-                $weekData['type'] = 'cours';
-
-                $weekSemaine = $allSemaines->first(function ($semaine) use ($weekStart) {
-                    return $this->isWeekDataAvailable($semaine, $weekStart);
-                });
-
-                if ($weekSemaine) {
-                    $weekData['emploi_du_temps'] = json_decode($weekSemaine->json_data, true)['emploi_du_temps'];
-                } else {
-                    $weekData['emploi_du_temps'] = $this->getDefaultCourseWeek($weekStart);
-                }
-            } else {
-                $weekData['emploi_du_temps'] = $this->getAlternanceWeek($weekStart);
+            if ($weekStart->eq($currentDate)) {
+                $weekData = $this->generateWeekData($weekStart, $allSemaines);
+                return response()->json(['weeks' => [$weekData]]);
             }
-
-            $allWeeks[] = $weekData;
         }
 
-        return response()->json(['weeks' => $allWeeks]);
+        return response()->json(['weeks' => []]); // Retourne vide si aucune semaine n'est trouvée
     }
+
+    private function generateWeekData($weekStart, $allSemaines)
+    {
+        $weekData = [
+            'start_date' => $weekStart->format('Y-m-d'),
+            'type' => 'alternance',
+            'emploi_du_temps' => []
+        ];
+
+        if (in_array($weekStart->format('Y-m-d'), $this->courseWeeks)) {
+            $weekData['type'] = 'cours';
+
+            $weekSemaine = $allSemaines->first(function ($semaine) use ($weekStart) {
+                return $this->isWeekDataAvailable($semaine, $weekStart);
+            });
+
+            if ($weekSemaine) {
+                $weekData['emploi_du_temps'] = json_decode($weekSemaine->json_data, true)['emploi_du_temps'];
+            } else {
+                $weekData['emploi_du_temps'] = $this->getDefaultCourseWeek($weekStart);
+            }
+        } else {
+            $weekData['emploi_du_temps'] = $this->getAlternanceWeek($weekStart);
+        }
+
+        return $weekData;
+    }
+
 
     private function isWeekDataAvailable($semaine, $weekStart)
     {
@@ -89,7 +99,8 @@ class EdtController extends Controller
                         'heure_debut' => '08h00',
                         'heure_fin' => '17h00',
                         'professeur' => 'Non spécifié',
-                        'salle' => 'Non spécifiée'
+                        'salle' => 'Non spécifiée',
+                        'allDay' => false,
                     ]
                 ]
             ];
@@ -110,7 +121,8 @@ class EdtController extends Controller
                         'heure_debut' => '08h00',
                         'heure_fin' => '19h00',
                         'professeur' => 'En entreprise',
-                        'salle' => 'Entreprise'
+                        'salle' => 'Entreprise',
+                        'allDay' => false,
                     ]
                 ]
             ];
@@ -147,6 +159,7 @@ class EdtController extends Controller
             'total_heures' => $data['total_heures'],
             'par_option' => $data['par_option'],
             'date_edition' => $dateEdition,
+            'allDay' => false,
         ]);
 
         foreach ($data['emploi_du_temps'] as $jourData) {
@@ -162,6 +175,7 @@ class EdtController extends Controller
                     'matiere' => $coursData['matiere'],
                     'professeur' => $coursData['professeur'] ?? null,
                     'salle' => $coursData['salle'] ?? null,
+                    'allDay' => false,
                 ]);
             }
         }
@@ -177,4 +191,25 @@ class EdtController extends Controller
         $minutes = isset($parts[1]) ? str_pad($parts[1], 2, '0', STR_PAD_RIGHT) : '00';
         return "$hours:$minutes:00";
     }
+
+    public function getRemainingWeeks()
+    {
+        $allSemaines = Semaine::all();
+        $currentDate = Carbon::now()->startOfWeek();
+        $startDate = Carbon::parse('2024-08-26');
+        $endDate = Carbon::parse('2025-08-31');
+
+        $weeks = CarbonPeriod::create($startDate, '1 week', $endDate);
+        $allWeeks = [];
+
+        foreach ($weeks as $weekStart) {
+            if ($weekStart->ne($currentDate)) {
+                $weekData = $this->generateWeekData($weekStart, $allSemaines);
+                $allWeeks[] = $weekData;
+            }
+        }
+
+        return response()->json(['weeks' => $allWeeks]);
+    }
+
 }

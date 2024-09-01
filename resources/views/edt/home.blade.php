@@ -182,11 +182,25 @@
                 .then(data => {
                     console.log("Données JSON chargées:", data);
                     updateCalendar(data);
+                    loadRemainingWeeks(); // Charge les autres semaines en arrière-plan
                 })
                 .catch(error => {
                     console.error('Erreur lors du chargement des données:', error);
                 });
         }
+
+        function loadRemainingWeeks() {
+            fetch('/edt/remaining-weeks')
+                .then(response => response.json())
+                .then(data => {
+                    console.log("Autres semaines chargées:", data);
+                    updateCalendar(data);
+                })
+                .catch(error => {
+                    console.error('Erreur lors du chargement des autres semaines:', error);
+                });
+        }
+
 
         function updateCalendar(data) {
             calendarEvents = generateEvents(data);
