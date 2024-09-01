@@ -29,9 +29,9 @@ class EdtController extends Controller
     public function getData()
     {
         $allSemaines = Semaine::all();
-        $currentDate = Carbon::now()->startOfWeek();
-        $startDate = Carbon::parse('2024-08-26');
-        $endDate = Carbon::parse('2025-08-31');
+        $currentDate = Carbon::now('Europe/Paris')->startOfWeek(); // Obtenez la date de début de la semaine actuelle en heure de Paris
+        $startDate = Carbon::parse('2024-08-26', 'Europe/Paris');
+        $endDate = Carbon::parse('2025-08-31', 'Europe/Paris');
 
         $weeks = CarbonPeriod::create($startDate, '1 week', $endDate);
         $allWeeks = [];
@@ -195,7 +195,6 @@ class EdtController extends Controller
     public function getRemainingWeeks()
     {
         $allSemaines = Semaine::all();
-        $currentDate = Carbon::now()->startOfWeek();
         $startDate = Carbon::parse('2024-08-26');
         $endDate = Carbon::parse('2025-08-31');
 
@@ -203,13 +202,12 @@ class EdtController extends Controller
         $allWeeks = [];
 
         foreach ($weeks as $weekStart) {
-            if ($weekStart->ne($currentDate)) {
-                $weekData = $this->generateWeekData($weekStart, $allSemaines);
-                $allWeeks[] = $weekData;
-            }
+            $weekData = $this->generateWeekData($weekStart, $allSemaines);
+            $allWeeks[] = $weekData;
         }
 
         return response()->json(['weeks' => $allWeeks]);
     }
+
 
 }
