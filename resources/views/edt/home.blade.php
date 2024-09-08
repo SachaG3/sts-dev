@@ -196,14 +196,15 @@
                 },
 
                 windowResize: function (view) {
-                    if (window.innerWidth <= 768) {
-                        calendar.changeView('timeGridDay');
+                    const isMobileView = window.innerWidth <= 768;
+
+                    if (isMobileView) {
                         calendar.setOption('dayHeaderFormat', {weekday: 'narrow'});
                     } else {
-                        calendar.changeView('timeGridWeek');
-                        calendar.setOption('dayHeaderFormat', {weekday: 'long'});
+                        calendar.setOption('dayHeaderFormat', {weekday: 'long', day: '2-digit'});
                     }
                 }
+
             });
             calendar.render();
 
