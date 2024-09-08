@@ -126,6 +126,21 @@
                         dayHeaderFormat: {weekday: 'long'}, // Vue jour (toujours "Lundi" pour mobile et PC)
                     }
                 },
+
+                views: {
+                    timeGridWeek: {
+                        dayHeaderFormat: isMobileView ? {weekday: 'narrow'} : {weekday: 'long', day: '2-digit'}, // Vue semaine
+                    },
+                    dayGridMonth: {
+                        dayHeaderFormat: isMobileView ? {weekday: 'narrow'} : {weekday: 'long'}, // Vue mois
+                    },
+                    timeGridDay: {
+                        // Toujours afficher le jour complet (par exemple, "Lundi") sur la vue jour, même sur mobile
+                        dayHeaderFormat: {weekday: 'long'},
+                    }
+                },
+
+
                 eventClassNames: function (arg) {
                     if (calendar.view.type === 'dayGridMonth') {
                         // Pour la vue mois, appliquer la classe 'fc-full-width-event'
@@ -203,6 +218,7 @@
                     } else {
                         calendar.setOption('dayHeaderFormat', {weekday: 'long', day: '2-digit'});
                     }
+
                 }
 
             });
