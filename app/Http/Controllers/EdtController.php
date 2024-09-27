@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Matiere;
 use App\Models\Semaine;
 use Carbon\Carbon;
 use Carbon\CarbonPeriod;
@@ -28,13 +29,12 @@ class EdtController extends Controller
 
     public function getData()
     {
-        $allSemaines = Semaine::all();
-        $currentDate = Carbon::now('Europe/Paris')->startOfWeek(); // Obtenez la date de début de la semaine actuelle en heure de Paris
+        $allSemaines = Semaine::with('jours.cours')->get(); // Récupère les semaines avec leurs relations
+        $currentDate = Carbon::now('Europe/Paris')->startOfWeek();
         $startDate = Carbon::parse('2024-08-26', 'Europe/Paris');
         $endDate = Carbon::parse('2025-08-31', 'Europe/Paris');
 
         $weeks = CarbonPeriod::create($startDate, '1 week', $endDate);
-        $allWeeks = [];
 
         foreach ($weeks as $weekStart) {
             if ($weekStart->eq($currentDate)) {
@@ -43,7 +43,7 @@ class EdtController extends Controller
             }
         }
 
-        return response()->json(['weeks' => []]); // Retourne vide si aucune semaine n'est trouvée
+        return response()->json(['weeks' => []]);
     }
 
     private function generateWeekData($weekStart, $allSemaines)
@@ -62,7 +62,29 @@ class EdtController extends Controller
             });
 
             if ($weekSemaine) {
-                $weekData['emploi_du_temps'] = json_decode($weekSemaine->json_data, true)['emploi_du_temps'];
+                foreach ($weekSemaine->jours as $jour) {
+                    $dayData = [
+                        'date' => Carbon::parse($jour->date)->format('d/m/Y'),
+                    ];
+
+
+                    foreach ($jour->cours as $cours) {
+                        $matiere = $cours->matiere;
+                        $dayData['cours'][] = [
+                            'matiere' => $matiere->name,
+                            'matiere_name' => $matiere->long_name,
+                            'color' => $matiere->color,
+                            'heure_debut' => $cours->heure_debut,
+                            'heure_fin' => $cours->heure_fin,
+                            'professeur' => $cours->professeur,
+                            'salle' => $cours->salle,
+                            'allDay' => $cours->allDay ?? false,
+                        ];
+                    }
+
+
+                    $weekData['emploi_du_temps'][] = $dayData;
+                }
             } else {
                 $weekData['emploi_du_temps'] = $this->getDefaultCourseWeek($weekStart);
             }
@@ -73,15 +95,18 @@ class EdtController extends Controller
         return $weekData;
     }
 
-
     private function isWeekDataAvailable($semaine, $weekStart)
     {
-        $data = json_decode($semaine->json_data, true);
+        $jours = $semaine->jours;
 
-        if (!isset($data['emploi_du_temps'][0]['date'])) {
+        if ($jours->isEmpty()) {
             return false;
         }
-        $dataWeekStart = Carbon::createFromFormat('d/m/Y', $data['emploi_du_temps'][0]['date'])->startOfWeek();
+
+        // Récupérer la première date disponible et la convertir en Carbon
+        $dataWeekStart = Carbon::parse($jours->first()->date)->startOfWeek();
+
+        // Comparer avec la semaine en cours
         return $dataWeekStart->eq($weekStart);
     }
 
@@ -96,6 +121,8 @@ class EdtController extends Controller
                 'cours' => [
                     [
                         'matiere' => 'En cours',
+                        'matiere_name' => 'En cours',
+                        'color' => '#dd8fe8',
                         'heure_debut' => '08h00',
                         'heure_fin' => '17h00',
                         'professeur' => 'Non spécifié',
@@ -118,6 +145,8 @@ class EdtController extends Controller
                 'cours' => [
                     [
                         'matiere' => 'En alternance',
+                        'matiere_name' => 'En alternance',
+                        'color' => '#c8cbcd',
                         'heure_debut' => '08h00',
                         'heure_fin' => '19h00',
                         'professeur' => 'En entreprise',
@@ -146,20 +175,18 @@ class EdtController extends Controller
         try {
             $dateEdition = Carbon::createFromFormat('l d F \à H:i', $data['date_edition']);
         } catch (\Exception $e) {
-            // Si le format de date n'est pas reconnu, utilisez la date actuelle
             $dateEdition = Carbon::now();
         }
 
         $semaine = Semaine::create([
+            'json_data' => $request->json_data,
             'numero' => $data['semaine']['numero'],
             'dates' => $data['semaine']['dates'],
             'annee_scolaire' => $data['annee_scolaire'],
             'formation' => $data['formation'],
-            'json_data' => $request->json_data,
             'total_heures' => $data['total_heures'],
             'par_option' => $data['par_option'],
             'date_edition' => $dateEdition,
-            'allDay' => false,
         ]);
 
         foreach ($data['emploi_du_temps'] as $jourData) {
@@ -169,13 +196,18 @@ class EdtController extends Controller
             ]);
 
             foreach ($jourData['cours'] as $coursData) {
+                $matiere = Matiere::firstOrCreate(
+                    ['name' => $coursData['matiere']],
+                    ['long_name' => $coursData['matiere']]
+                );
+
                 $jour->cours()->create([
                     'heure_debut' => $this->formatTime($coursData['heure_debut']),
                     'heure_fin' => $this->formatTime($coursData['heure_fin']),
-                    'matiere' => $coursData['matiere'],
+                    'matiere_nom' => $coursData['matiere'],
+                    'matiere_id' => $matiere->id,
                     'professeur' => $coursData['professeur'] ?? null,
                     'salle' => $coursData['salle'] ?? null,
-                    'allDay' => false,
                 ]);
             }
         }
@@ -185,7 +217,6 @@ class EdtController extends Controller
 
     private function formatTime($time)
     {
-        // Convertit le format "8h30" en "08:30:00"
         $parts = explode('h', $time);
         $hours = str_pad($parts[0], 2, '0', STR_PAD_LEFT);
         $minutes = isset($parts[1]) ? str_pad($parts[1], 2, '0', STR_PAD_RIGHT) : '00';
@@ -194,19 +225,31 @@ class EdtController extends Controller
 
     public function getRemainingWeeks()
     {
-        $allSemaines = Semaine::all();
-        $startDate = Carbon::parse('2024-08-26');
-        $endDate = Carbon::parse('2025-08-31');
+        try {
+            \Log::info('getRemainingWeeks called'); // Journalisation
+            $allSemaines = Semaine::with('jours.cours.matiere')->get();  // Charge la relation matiere
 
-        $weeks = CarbonPeriod::create($startDate, '1 week', $endDate);
-        $allWeeks = [];
+            \Log::info('All semaines loaded', ['count' => $allSemaines->count()]);
 
-        foreach ($weeks as $weekStart) {
-            $weekData = $this->generateWeekData($weekStart, $allSemaines);
-            $allWeeks[] = $weekData;
+            $startDate = Carbon::parse('2024-08-26');
+            $endDate = Carbon::parse('2025-08-31');
+
+            $weeks = CarbonPeriod::create($startDate, '1 week', $endDate);
+            $allWeeks = [];
+
+            foreach ($weeks as $weekStart) {
+                \Log::info('Processing week', ['week_start' => $weekStart->format('Y-m-d')]);
+
+                $weekData = $this->generateWeekData($weekStart, $allSemaines);
+                $allWeeks[] = $weekData;
+            }
+
+            return response()->json(['weeks' => $allWeeks]);
+        } catch (\Exception $e) {
+            \Log::error('Error in getRemainingWeeks', ['error' => $e->getMessage()]);
+
+            return response()->json(['error' => $e->getMessage()], 500);
         }
-
-        return response()->json(['weeks' => $allWeeks]);
     }
 
 
