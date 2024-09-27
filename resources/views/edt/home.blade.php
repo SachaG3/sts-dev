@@ -196,6 +196,7 @@
                     });
 
                     const eventDetails = `
+                        <p><strong>Nom:</strong>  ${info.event.extendedProps.matiere_name}<p>
                         <p><strong>Début:</strong> ${startTime}</p>
                         <p><strong>Fin:</strong> ${endTime}</p>
                         ${info.event.extendedProps.professor ? `<p><strong>Professeur:</strong> ${info.event.extendedProps.professor}</p>` : ''}
@@ -268,13 +269,8 @@
                     jourDate.setDate(weekStartDate.getDate() + index);
 
                     return jour.cours.map(cours => {
-                        if (!cours.heure_debut || !cours.heure_fin || !cours.matiere) {
+                        if (!cours.heure_debut || !cours.heure_fin || !cours.matiere || !cours.color) {
                             return null;
-                        }
-
-                        if (!matiereColors[cours.matiere]) {
-                            matiereColors[cours.matiere] = colors[colorIndex % colors.length];
-                            colorIndex++;
                         }
 
                         const startTime = parseTime(cours.heure_debut);
@@ -294,9 +290,10 @@
                             title: cours.matiere,
                             start: startDate,
                             end: endDate,
-                            backgroundColor: matiereColors[cours.matiere],
-                            borderColor: matiereColors[cours.matiere],
+                            backgroundColor: cours.color,
+                            borderColor: cours.color,
                             extendedProps: {
+                                matiere_name: cours.matiere_name,
                                 professor: cours.professeur,
                                 room: cours.salle
                             }
@@ -305,6 +302,7 @@
                 });
             }).filter(event => event !== null);
         }
+
 
         function parseTime(timeStr) {
             const [hours, minutes] = timeStr.split('h');

@@ -3,8 +3,15 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="robots" content="noindex">
     <link rel="shortcut icon" href="caensup_logo.jpeg" type="image/x-icon">
-    <link rel="stylesheet" href="css/output.css">
+    <link rel="stylesheet" href="/css/output.css">
+
+    <!-- Web App Settings -->
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <link rel="apple-touch-icon" href="caensup_logo.jpeg">
+
     @yield('head')
     @yield("script")
     <style>
