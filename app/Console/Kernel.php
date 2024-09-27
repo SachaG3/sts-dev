@@ -12,7 +12,7 @@ class Kernel extends ConsoleKernel
      */
     protected function schedule(Schedule $schedule)
     {
-        $schedule->command('compare:cours')->everyMinute();
+        $schedule->command('compare:cours')->cron('* * * * *');
     }
 
     /**
