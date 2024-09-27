@@ -95,7 +95,7 @@ class ICalendarController extends Controller
             $description = trim($description);
 
             $event = Event::create()
-                ->name($cours->matiere)
+                ->name($cours->matiere->name)
                 ->description($description)
                 ->startsAt($start)
                 ->endsAt($end);
