@@ -25,11 +25,16 @@ class CompareCours extends Command
 
     public function handle()
     {
-        $url = 'https://api.ecoledirecte.com/v3/ical/E/11254/51314661597a597a5a32704f4c326f315358427463485a6b52484a364e577069555841325758517a4b3051.ics';
-        $response = Http::get($url);
-
-        if ($response->failed()) {
-            Log::create(['date' => now(), 'type' => 'ecoledirect', 'state' => 'échec', 'message' => 'Impossible de télécharger le fichier ICS.']);
+        try {
+            $url = 'https://api.ecoledirecte.com/v3/ical/E/11254/51314661597a597a5a32704f4c326f315358427463485a6b52484a364e577069555841325758517a4b3051.ics';
+            $response = Http::get($url);
+        } catch (\Exception $e) {
+            Log::create(['date' => now(), 'type' => 'ecoledirect', 'state' => 'error', 'message' => 'Impossible de télécharger le fichier ICS.']);
+            Http::get("https://smsapi.free-mobile.fr/sendmsg", [
+                'user' => '54876185',
+                'pass' => getenv('MESSAGE_API'),
+                'msg' => "Le fichier École Direct ne fonctionne pas. Consultez les logs pour plus de détails : https://sts-dev/admin/log",
+            ]);
             return;
         }
 
