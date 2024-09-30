@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Jour;
 use App\Models\Matiere;
 use App\Models\Semaine;
 use Carbon\Carbon;
@@ -29,25 +30,33 @@ class EdtController extends Controller
 
     public function getData()
     {
-        $allSemaines = Semaine::with('jours.cours')->get(); // Récupère les semaines avec leurs relations
-        $currentDate = Carbon::now('Europe/Paris')->startOfWeek();
-        $startDate = Carbon::parse('2024-08-26', 'Europe/Paris');
-        $endDate = Carbon::parse('2025-08-31', 'Europe/Paris');
+        $currentDate = Carbon::now('Europe/Paris');
 
-        $weeks = CarbonPeriod::create($startDate, '1 week', $endDate);
+        if ($currentDate->isWeekend()) {
+            $currentDate = $currentDate->next(Carbon::MONDAY);
+        } else {
+            $currentDate = $currentDate->startOfWeek(Carbon::MONDAY);
+        }
+        $lundi = Jour::where('date', $currentDate->format('Y-m-d'))->first();
+        if ($lundi && $lundi->semaine_id) {
+            $weekSemaine = Semaine::with('jours.cours')
+                ->where('id', $lundi->semaine_id)
+                ->first();
 
-        foreach ($weeks as $weekStart) {
-            if ($weekStart->eq($currentDate)) {
-                $weekData = $this->generateWeekData($weekStart, $allSemaines);
+            if ($weekSemaine) {
+                $weekData = $this->generateWeekData($currentDate, collect([$weekSemaine]));
                 return response()->json(['weeks' => [$weekData]]);
             }
         }
 
+        // Si aucune semaine n'est trouvée, retourner un tableau vide
         return response()->json(['weeks' => []]);
     }
 
+
     private function generateWeekData($weekStart, $allSemaines)
     {
+
         $weekData = [
             'start_date' => $weekStart->format('Y-m-d'),
             'type' => 'alternance',
@@ -102,11 +111,18 @@ class EdtController extends Controller
         if ($jours->isEmpty()) {
             return false;
         }
+        
+        $firstDayDate = $jours->first()->date;
 
-        // Récupérer la première date disponible et la convertir en Carbon
-        $dataWeekStart = Carbon::parse($jours->first()->date)->startOfWeek();
+        if (!$firstDayDate) {
+            return false;
+        }
 
-        // Comparer avec la semaine en cours
+        $dataWeekStart = Carbon::parse($firstDayDate)->startOfWeek();
+
+        $dataWeekStart->setTimezone('Europe/Paris')->startOfDay();
+        $weekStart->setTimezone('Europe/Paris')->startOfDay();
+
         return $dataWeekStart->eq($weekStart);
     }
 
@@ -226,10 +242,7 @@ class EdtController extends Controller
     public function getRemainingWeeks()
     {
         try {
-            \Log::info('getRemainingWeeks called'); // Journalisation
             $allSemaines = Semaine::with('jours.cours.matiere')->get();  // Charge la relation matiere
-
-            \Log::info('All semaines loaded', ['count' => $allSemaines->count()]);
 
             $startDate = Carbon::parse('2024-08-26');
             $endDate = Carbon::parse('2025-08-31');
@@ -238,7 +251,6 @@ class EdtController extends Controller
             $allWeeks = [];
 
             foreach ($weeks as $weekStart) {
-                \Log::info('Processing week', ['week_start' => $weekStart->format('Y-m-d')]);
 
                 $weekData = $this->generateWeekData($weekStart, $allSemaines);
                 $allWeeks[] = $weekData;
@@ -246,7 +258,6 @@ class EdtController extends Controller
 
             return response()->json(['weeks' => $allWeeks]);
         } catch (\Exception $e) {
-            \Log::error('Error in getRemainingWeeks', ['error' => $e->getMessage()]);
 
             return response()->json(['error' => $e->getMessage()], 500);
         }
