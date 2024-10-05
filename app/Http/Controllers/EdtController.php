@@ -30,60 +30,48 @@ class EdtController extends Controller
 
     public function getData()
     {
-        // Récupérer la date actuelle et ajuster au lundi si c'est le week-end
         $currentDate = Carbon::now('Europe/Paris')->startOfWeek(Carbon::MONDAY);
 
-        // Récupérer le jour correspondant au lundi et charger les données liées à la semaine en une seule requête
         $lundi = Jour::with('semaine.jours.cours.matiere')
             ->where('date', $currentDate->format('Y-m-d'))
             ->first();
 
         if ($lundi && $lundi->semaine) {
-            // Générer les données de la semaine
             $weekData = $this->generateWeekData($currentDate, collect([$lundi->semaine]));
             return response()->json(['weeks' => [$weekData]]);
         }
 
-        // Si aucune semaine n'est trouvée, retourner un tableau vide
         return response()->json(['weeks' => []]);
     }
 
     private function generateWeekData($weekStart, $allSemaines)
     {
-        // Utilisation d'un tableau associatif (Set) pour les semaines de cours
         $courseWeeksSet = array_flip($this->courseWeeks);
 
-        // Initialisation des données de la semaine
         $weekData = [
             'start_date' => $weekStart->format('Y-m-d'),
             'type' => 'alternance',
             'emploi_du_temps' => []
         ];
 
-        // Vérifier si la semaine est une semaine de cours
         if (isset($courseWeeksSet[$weekStart->format('Y-m-d')])) {
             $weekData['type'] = 'cours';
 
-            // Trouver la semaine correspondante dans la collection
             $weekSemaine = $allSemaines->first(function ($semaine) use ($weekStart) {
                 return $this->isWeekDataAvailable($semaine, $weekStart);
             });
 
             if ($weekSemaine) {
-                // Parcourir les jours de la semaine
                 foreach ($weekSemaine->jours as $jour) {
-                    // Parser la date une seule fois
                     $formattedDate = Carbon::parse($jour->date)->format('d/m/Y');
                     $dayData = [
                         'date' => $formattedDate,
                         'cours' => []
                     ];
 
-                    // Parcourir les cours de chaque jour
                     foreach ($jour->cours as $cours) {
                         $matiere = $cours->matiere;
 
-                        // Ajouter les données du cours
                         $dayData['cours'][] = [
                             'matiere' => $matiere->name,
                             'matiere_name' => $matiere->long_name,
@@ -96,15 +84,12 @@ class EdtController extends Controller
                         ];
                     }
 
-                    // Ajouter les données du jour à la semaine
                     $weekData['emploi_du_temps'][] = $dayData;
                 }
             } else {
-                // Si la semaine n'a pas de données, utiliser les données par défaut
                 $weekData['emploi_du_temps'] = $this->getDefaultCourseWeek($weekStart);
             }
         } else {
-            // Si ce n'est pas une semaine de cours, générer une semaine d'alternance
             $weekData['emploi_du_temps'] = $this->getAlternanceWeek($weekStart);
         }
 
@@ -148,9 +133,7 @@ class EdtController extends Controller
                         'matiere_name' => 'En cours',
                         'color' => '#dd8fe8',
                         'heure_debut' => '08h00',
-                        'heure_fin' => '17h00',
-                        'professeur' => 'Non spécifié',
-                        'salle' => 'Non spécifiée',
+                        'heure_fin' => '17h30',
                         'allDay' => false,
                     ]
                 ]
@@ -172,9 +155,7 @@ class EdtController extends Controller
                         'matiere_name' => 'En alternance',
                         'color' => '#c8cbcd',
                         'heure_debut' => '08h00',
-                        'heure_fin' => '19h00',
-                        'professeur' => 'En entreprise',
-                        'salle' => 'Entreprise',
+                        'heure_fin' => '17h30',
                         'allDay' => false,
                     ]
                 ]
