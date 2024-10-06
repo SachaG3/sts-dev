@@ -2,7 +2,6 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Jour;
 use App\Models\Matiere;
 use App\Models\Semaine;
 use Carbon\Carbon;
@@ -30,19 +29,21 @@ class EdtController extends Controller
 
     public function getData()
     {
-        $currentDate = Carbon::now('Europe/Paris')->startOfWeek(Carbon::MONDAY);
-
-        $lundi = Jour::with('semaine.jours.cours.matiere')
-            ->where('date', $currentDate->format('Y-m-d'))
-            ->first();
-
-        if ($lundi && $lundi->semaine) {
-            $weekData = $this->generateWeekData($currentDate, collect([$lundi->semaine]));
-            return response()->json(['weeks' => [$weekData]]);
+        $currentDate = Carbon::now('Europe/Paris');
+        
+        if ($currentDate->isWeekend()) {
+            $currentDate = $currentDate->next(Carbon::MONDAY);
+        } else {
+            $currentDate = $currentDate->startOfWeek(Carbon::MONDAY);
         }
 
-        return response()->json(['weeks' => []]);
+        $allSemaines = Semaine::with('jours.cours.matiere')->get();
+
+        $weekData = $this->generateWeekData($currentDate, $allSemaines);
+
+        return response()->json(['weeks' => [$weekData]]);
     }
+
 
     private function generateWeekData($weekStart, $allSemaines)
     {
