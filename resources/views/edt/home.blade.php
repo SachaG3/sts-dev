@@ -121,8 +121,11 @@
 
         document.addEventListener('DOMContentLoaded', function () {
             const calendarEl = document.getElementById('calendar');
-            const isMobileView = window.innerWidth <= 768;
-            const initialView = isMobileView ? 'timeGridDay' : 'timeGridWeek';
+            let isMobileView = window.innerWidth <= 768;
+            let initialView = isMobileView ? 'timeGridDay' : 'timeGridWeek';
+            let availableViews = isMobileView
+                ? 'dayGridMonth,timeGridWeek,timeGridDay'
+                : 'dayGridMonth,timeGridWeek';
 
             calendar = new FullCalendar.Calendar(calendarEl, {
 
@@ -130,7 +133,7 @@
                 headerToolbar: {
                     left: 'prev,next today',
                     center: 'title',
-                    right: 'dayGridMonth,timeGridWeek,timeGridDay'
+                    right: availableViews
                 },
                 locale: 'fr',
                 buttonText: {
