@@ -328,9 +328,9 @@
         });
 
         document.addEventListener('keydown', function (event) {
-            if (event.key === 'ArrowLeft') {
+            if (event.key === 'ArrowLeft' || event.key === 'q') {
                 calendar.prev();
-            } else if (event.key === 'ArrowRight') {
+            } else if (event.key === 'ArrowRight' || event.key === 'd') {
                 calendar.next();
             }
         });
