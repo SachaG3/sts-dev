@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Cours;
 use App\Models\Matiere;
 use App\Models\Semaine;
 use Carbon\Carbon;
@@ -27,10 +28,36 @@ class EdtController extends Controller
         return view('edt.home');
     }
 
+    public function edit($id)
+    {
+        $cours = Cours::findOrFail($id);
+        $matieres = Matiere::all();
+
+        return view('cours.edit', compact('cours', 'matieres'));
+    }
+
+    public function update(Request $request, $id)
+    {
+        $cours = Cours::findOrFail($id);
+
+        $request->validate([
+            'matiere_id' => 'required',
+            'enseignant_id' => 'required',
+            'salle' => 'required|string|max:255',
+        ]);
+
+        $cours->matiere_id = $request->matiere_id;
+        $cours->enseignant_id = $request->enseignant_id;
+        $cours->salle = $request->salle;
+        $cours->save();
+
+        return redirect()->route('cours.index')->with('success', 'Cours mis à jour avec succès');
+    }
+
     public function getData()
     {
         $currentDate = Carbon::now('Europe/Paris');
-        
+
         if ($currentDate->isWeekend()) {
             $currentDate = $currentDate->next(Carbon::MONDAY);
         } else {
