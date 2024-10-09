@@ -12,6 +12,7 @@ use Illuminate\Http\Request;
 class EdtController extends Controller
 {
     protected $courseWeeks;
+    protected $holidays;
 
     public function __construct()
     {
@@ -20,6 +21,11 @@ class EdtController extends Controller
             '2024-11-25', '2024-12-09', '2025-01-06', '2025-01-27', '2025-02-17',
             '2025-03-10', '2025-03-31', '2025-04-21', '2025-05-05', '2025-06-02',
             '2025-06-16', '2025-06-30'
+        ];
+        $this->holidays = [
+            '2024-11-01', '2024-11-11', '2024-12-25', '2025-01-01', '2025-04-21',
+            '2025-05-01', '2025-05-08', '2025-05-29', '2025-06-09', '2025-07-14',
+            '2025-08-15',
         ];
     }
 
@@ -75,6 +81,7 @@ class EdtController extends Controller
     private function generateWeekData($weekStart, $allSemaines)
     {
         $courseWeeksSet = array_flip($this->courseWeeks);
+        $holidaysSet = array_flip($this->holidays); // Conversion en ensemble pour une recherche rapide
 
         $weekData = [
             'start_date' => $weekStart->format('Y-m-d'),
@@ -92,33 +99,81 @@ class EdtController extends Controller
             if ($weekSemaine) {
                 foreach ($weekSemaine->jours as $jour) {
                     $formattedDate = Carbon::parse($jour->date)->format('d/m/Y');
+                    $dayCarbon = Carbon::parse($jour->date);
                     $dayData = [
                         'date' => $formattedDate,
                         'cours' => []
                     ];
 
-                    foreach ($jour->cours as $cours) {
-                        $matiere = $cours->matiere;
-
+                    // Vérifier si le jour est un jour férié
+                    if (isset($holidaysSet[$dayCarbon->format('Y-m-d')])) {
                         $dayData['cours'][] = [
-                            'matiere' => $matiere->name,
-                            'matiere_name' => $matiere->long_name,
-                            'color' => $matiere->color,
-                            'heure_debut' => $cours->heure_debut,
-                            'heure_fin' => $cours->heure_fin,
-                            'professeur' => $cours->professeur,
-                            'salle' => $cours->salle,
-                            'allDay' => $cours->allDay ?? false,
+                            'matiere' => 'Jour férié',
+                            'matiere_name' => 'Jour férié',
+                            'color' => '#FF0000', // Couleur rouge pour les jours fériés
+                            'heure_debut' => null,
+                            'heure_fin' => null,
+                            'professeur' => null,
+                            'salle' => null,
+                            'allDay' => false,
                         ];
+                    } else {
+                        foreach ($jour->cours as $cours) {
+                            $matiere = $cours->matiere;
+
+                            $dayData['cours'][] = [
+                                'matiere' => $matiere->name,
+                                'matiere_name' => $matiere->long_name,
+                                'color' => $matiere->color,
+                                'heure_debut' => $cours->heure_debut,
+                                'heure_fin' => $cours->heure_fin,
+                                'professeur' => $cours->professeur,
+                                'salle' => $cours->salle,
+                                'allDay' => $cours->allDay ?? false,
+                            ];
+                        }
                     }
 
                     $weekData['emploi_du_temps'][] = $dayData;
                 }
             } else {
-                $weekData['emploi_du_temps'] = $this->getDefaultCourseWeek($weekStart);
+                $weekData['emploi_du_temps'] = $this->getDefaultCourseWeek($weekStart, $holidaysSet);
+
             }
         } else {
-            $weekData['emploi_du_temps'] = $this->getAlternanceWeek($weekStart);
+            foreach (range(0, 4) as $i) {
+                $currentDate = $weekStart->copy()->addDays($i);
+                $formattedDate = $currentDate->format('d/m/Y');
+                $dayData = [
+                    'date' => $formattedDate,
+                    'cours' => []
+                ];
+
+                // Vérifier si le jour est un jour férié
+                if (isset($holidaysSet[$currentDate->format('Y-m-d')])) {
+                    $dayData['cours'][] = [
+                        'matiere' => 'Jour férié',
+                        'matiere_name' => 'Jour férié',
+                        'color' => '#FF0000',
+                        'heure_debut' => '08h00',
+                        'heure_fin' => '17h30',
+                        'professeur' => null,
+                        'salle' => null,
+                        'allDay' => false,
+                    ];
+                } else {
+                    $dayData['cours'][] = [
+                        'matiere' => 'En alternance',
+                        'matiere_name' => 'En alternance',
+                        'color' => '#c8cbcd',
+                        'heure_debut' => '08h00',
+                        'heure_fin' => '17h30',
+                        'allDay' => false,
+                    ];
+                }
+
+                $weekData['emploi_du_temps'][] = $dayData;
+            }
         }
 
         return $weekData;
@@ -148,49 +203,45 @@ class EdtController extends Controller
     }
 
 
-    private function getDefaultCourseWeek($weekStart)
+    private function getDefaultCourseWeek($weekStart, $holidaysSet)
     {
         $week = [];
         for ($i = 0; $i < 5; $i++) {
             $currentDate = $weekStart->copy()->addDays($i);
-            $week[] = [
-                'date' => $currentDate->format('d/m/Y'),
-                'cours' => [
-                    [
-                        'matiere' => 'En cours',
-                        'matiere_name' => 'En cours',
-                        'color' => '#dd8fe8',
-                        'heure_debut' => '08h00',
-                        'heure_fin' => '17h30',
-                        'allDay' => false,
-                    ]
-                ]
+            $formattedDate = $currentDate->format('d/m/Y');
+            $dayData = [
+                'date' => $formattedDate,
+                'cours' => []
             ];
+
+            // Vérifier si le jour est un jour férié
+            if (isset($holidaysSet[$currentDate->format('Y-m-d')])) {
+                $dayData['cours'][] = [
+                    'matiere' => 'Jour férié',
+                    'matiere_name' => 'Jour férié',
+                    'color' => '#FF0000',
+                    'heure_debut' => '08h00',
+                    'heure_fin' => '17h30',
+                    'professeur' => null,
+                    'salle' => null,
+                    'allDay' => false,
+                ];
+            } else {
+                $dayData['cours'][] = [
+                    'matiere' => 'En cours',
+                    'matiere_name' => 'En cours',
+                    'color' => '#dd8fe8',
+                    'heure_debut' => '08h00',
+                    'heure_fin' => '17h30',
+                    'allDay' => false,
+                ];
+            }
+
+            $week[] = $dayData;
         }
         return $week;
     }
 
-    private function getAlternanceWeek($weekStart)
-    {
-        $week = [];
-        for ($i = 0; $i < 5; $i++) {
-            $currentDate = $weekStart->copy()->addDays($i);
-            $week[] = [
-                'date' => $currentDate->format('d/m/Y'),
-                'cours' => [
-                    [
-                        'matiere' => 'En alternance',
-                        'matiere_name' => 'En alternance',
-                        'color' => '#c8cbcd',
-                        'heure_debut' => '08h00',
-                        'heure_fin' => '17h30',
-                        'allDay' => false,
-                    ]
-                ]
-            ];
-        }
-        return $week;
-    }
 
     public function showInputForm()
     {
@@ -278,6 +329,28 @@ class EdtController extends Controller
 
             return response()->json(['error' => $e->getMessage()], 500);
         }
+    }
+
+    private function getAlternanceWeek($weekStart)
+    {
+        $week = [];
+        for ($i = 0; $i < 5; $i++) {
+            $currentDate = $weekStart->copy()->addDays($i);
+            $week[] = [
+                'date' => $currentDate->format('d/m/Y'),
+                'cours' => [
+                    [
+                        'matiere' => 'En alternance',
+                        'matiere_name' => 'En alternance',
+                        'color' => '#c8cbcd',
+                        'heure_debut' => '08h00',
+                        'heure_fin' => '17h30',
+                        'allDay' => false,
+                    ]
+                ]
+            ];
+        }
+        return $week;
     }
 
 
