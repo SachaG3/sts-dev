@@ -899,6 +899,15 @@ html {
   content: var(--tw-content);
 }
 
+.diff {
+  position: relative;
+  display: grid;
+  width: 100%;
+  overflow: hidden;
+  container-type: inline-size;
+  grid-template-columns: auto 1fr;
+}
+
 @media (hover: hover) {
   .btn:hover {
     --tw-border-opacity: 1;

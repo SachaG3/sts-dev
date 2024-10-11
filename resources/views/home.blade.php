@@ -16,9 +16,9 @@
 
         <div class="grid grid-cols-5 gap-6 p-8">
             @php
-                $icons = ['calendar', 'mail', 'book-text', 'hourglass', 'hourglass', 'globe', 'github', 'hourglass', 'hourglass', 'hourglass'];
-                $icon_href = ['/', '#', '#', '#', '#', 'https://slamwiki2.kobject.net/', 'https://github.com/jcheron', '#', '#', '#'];
-                $datatip = ['Calendrier', 'les mails', 'Agenda', 'En cours', 'En cours', 'slamwiki', 'GitHub de JC', 'En cours', 'En cours', 'En cours'];
+                $icons = ['calendar', 'mail', 'book-text', 'hourglass', 'hourglass', 'globe', 'github', 'archive', 'hourglass', 'hourglass'];
+                $icon_href = ['/', '#', '#', '#', '#', 'https://slamwiki2.kobject.net/', 'https://github.com/jcheron', 'https://www.iutcaen.unicaen.fr/dokuc3/departement_info/personnels/pb/mp3', '#', '#'];
+                $datatip = ['Calendrier', 'les mails', 'Agenda', 'En cours', 'En cours', 'slamwiki', 'GitHub de JC', 'Brutus', 'En cours', 'En cours'];
             @endphp
             @foreach ($icons as $index => $icon)
                 <div class="icon relative group">
