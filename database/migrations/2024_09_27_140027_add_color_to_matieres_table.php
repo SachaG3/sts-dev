@@ -11,6 +11,7 @@ return new class extends Migration {
     public function up(): void
     {
         Schema::table('matieres', function (Blueprint $table) {
+            $table->string('long_name')->nullable()->after('name');
             $table->string('color')->nullable()->after('long_name');
         });
     }
