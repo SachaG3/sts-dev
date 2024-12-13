@@ -104,7 +104,6 @@ class ICalendarController extends Controller
         }
     }
 
-
     private function getDayIndex($jourName)
     {
         $days = [
@@ -148,5 +147,27 @@ class ICalendarController extends Controller
 
             $calendar->event($event);
         }
+    }
+
+    public function feedWithoutAlternance(Request $request)
+    {
+        $calendar = Calendar::create('Emploi du temps STS Dev - Formation')
+            ->refreshInterval(60)
+            ->productIdentifier('//Votre École//STS Dev Calendrier Formation//FR');
+
+        $startDate = Carbon::parse('2024-08-26');
+        $endDate = Carbon::parse('2025-08-31');
+
+        $weeks = CarbonPeriod::create($startDate, '1 week', $endDate);
+
+        foreach ($weeks as $weekStart) {
+            if (in_array($weekStart->format('Y-m-d'), $this->courseWeeks)) {
+                $this->addCourseWeek($calendar, $weekStart);
+            }
+        }
+
+        return response($calendar->get())
+            ->header('Content-Type', 'text/calendar; charset=utf-8')
+            ->header('Content-Disposition', 'attachment; filename="sts-dev-calendar-formation.ics"');
     }
 }

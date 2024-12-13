@@ -19,6 +19,8 @@ Route::get('/check_authentication', [HomeController::class, 'checkAuthentication
 Route::get('/edt/{id}/edit', [EdtController::class, 'edit'])->name('cours.edit');
 Route::put('/edt/{id}', [EdtController::class, 'update'])->name('cours.update');
 Route::get('/calendar/feed.ics', [ICalendarController::class, 'feed'])->name('calendar.feed');
+Route::get('/calendar/formation', [ICalendarController::class, 'feedWithoutAlternance']);
+
 
 Route::post('/verify-password', [HomeController::class, 'verifyPassword'])->name('verify_password');
 Route::get('/get-emails', [HomeController::class, 'getEmails'])->name('get_emails');
