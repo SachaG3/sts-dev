@@ -9,7 +9,7 @@ class Matiere extends Model
 {
     use HasFactory;
 
-    protected $fillable = ['name', 'long_name'];
+    protected $fillable = ['name', 'long_name', 'color'];
 
     public function profs()
     {
