@@ -77,8 +77,12 @@ class ScheduleController extends Controller
         }
 
         try {
+            $phpPath = '/usr/local/bin/php';
+            $artisanPath = '/home/gusa3095/sts-dev.fr/artisan';
+
             $process = new Process([
-                'artisan',
+                $phpPath,
+                $artisanPath,
                 'schedule:fetch-and-store',
                 $formation,
                 $semaine
