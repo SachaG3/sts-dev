@@ -78,7 +78,7 @@ class ScheduleController extends Controller
 
         try {
             $process = new Process([
-                '/usr/local/bin/php /home/gusa3095/sts-dev.fr/artisan',
+                'artisan',
                 'schedule:fetch-and-store',
                 $formation,
                 $semaine
