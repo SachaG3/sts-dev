@@ -29,7 +29,7 @@ class ScheduleController extends Controller
 
         if ($formation === "Licence STS Cyber") {
             try {
-                $response = Http::timeout(60)->get("https://www.cyber.sts-dev.fr/api/publiee", [
+                $response = Http::timeout(60)->post("https://cyber.sts-dev.fr/api/publiee", [
                     'semaine' => $semaine,
                     'formation' => $formation,
                 ]);
