@@ -13,11 +13,13 @@ class ScheduleController extends Controller
     public function fetchAndStore(Request $request)
     {
         $validated = $request->validate([
-            'semaine' => 'required|integer|min:1|max:52',
+            'semaine' => 'required|string|max:255',
             'formation' => 'required|string|max:255',
         ]);
 
         $semaine = $validated['semaine'];
+        $semaine = (int)substr($semaine, 1);
+
         $formation = $validated['formation'];
 
         LogModel::create([
